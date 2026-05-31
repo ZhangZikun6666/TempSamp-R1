@@ -1,0 +1,18 @@
+{#- =========================================================
+   TimeLens Temporal Grounding Prompt Template
+
+   We pass the dataset's ``messages[0].content`` through verbatim — it already
+   contains the full instruction and few-shot example, so this template only
+   trims it. This keeps train-time and eval-time prompts identical.
+
+   If the dataset stores a bare question instead of the full prompt, set
+   ``TIMELENS_APPEND_FORMAT_HINT=1`` to append a fallback hint elsewhere.
+   ========================================================= -#}
+{%- if problem is defined -%}
+{%- set question = problem -%}
+{%- elif content is defined -%}
+{%- set question = content -%}
+{%- else -%}
+{{ 1 / 0 }}
+{%- endif -%}
+{{ question | trim }}

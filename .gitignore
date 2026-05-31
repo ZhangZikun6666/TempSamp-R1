@@ -1,0 +1,33 @@
+# --- project-specific ignores ---
+scripts/generate_timelens_figure.py
+outputs/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.ipynb_checkpoints/
+
+# --- environments ---
+.venv/
+venv/
+env/
+
+# --- caches / logs / checkpoints ---
+logs/
+*.log
+wandb/
+swanlab_log/
+*.pt
+*.ckpt
+.cache/
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+*.swp

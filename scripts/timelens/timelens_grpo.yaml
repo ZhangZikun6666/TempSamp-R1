@@ -1,0 +1,136 @@
+# TimeLens Temporal Grounding — vanilla GRPO baseline (Qwen3.5-VL-4B).
+# Reward: temporal IoU + format (scripts/timelens/timelens_reward.py).
+# For the TempSamp-R1 variant (GT injection + reward shaping) see
+# scripts/timelens/timelens_tempsamp.yaml.
+
+data:
+  train_files: ${oc.env:TIMELENS_TRAIN_FILES,/path/to/timelens_train.jsonl}
+  val_files: ${oc.env:TIMELENS_VAL_FILES,/path/to/timelens_val.jsonl}
+
+  prompt_key: problem
+  answer_key: answer
+  image_key: images
+  video_key: videos
+  use_preprocessed_videos: ${oc.env:TIMELENS_USE_PREPROCESSED,false}
+  # Valid: prefer_preprocessed / preprocessed_only / realtime_only
+  video_source_mode: ${oc.env:TIMELENS_VIDEO_SOURCE_MODE,realtime_only}
+  preprocessed_video_dir: ${oc.env:TIMELENS_PREPROCESSED_VIDEO_DIR,null}
+  val_preprocessed_video_dir: ${oc.env:TIMELENS_VAL_PREPROCESSED_VIDEO_DIR,null}
+  image_dir: null
+
+  # Vision-token cap. qwen_vl_utils treats video_total_pixels as a half-budget
+  # (× FRAME_FACTOR=2), so the effective cap is ~28M pixels / ~13.7k tokens.
+  video_fps: 2.0
+  video_max_frames: 768
+  video_min_pixels: 4096
+  video_max_pixels: 786432
+  video_total_pixels: 14680064
+  val_video_fps: 2.0
+  val_video_max_frames: 768
+  val_video_min_pixels: 4096
+  val_video_max_pixels: 786432
+  val_video_total_pixels: 14680064
+  max_prompt_length: 20480
+  max_response_length: 256
+  rollout_batch_size: 16
+  mini_rollout_batch_size: null
+  val_batch_size: 16
+  format_prompt: "scripts/timelens/format_prompt/timelens.jinja"
+  override_chat_template: null
+  shuffle: true
+  seed: 42
+  filter_overlong_prompts: true
+
+algorithm:
+  adv_estimator: grpo
+  disable_kl: true
+  use_kl_loss: false
+  kl_penalty: low_var_kl
+  kl_coef: 0.0
+
+worker:
+  actor:
+    # global_batch_size = rollout_batch_size = 16 -> 1 update / rollout step.
+    # 1 update / step performed better than 4 updates / step (gbs=4) on TimeLens.
+    global_batch_size: 16
+    micro_batch_size_per_device_for_update: 2
+    micro_batch_size_per_device_for_experience: 1
+    ppo_epochs: 1
+    max_grad_norm: 1.0
+    clip_ratio_low: 0.2
+    # DAPO asymmetric clip: looser upper bound for positive advantages.
+    clip_ratio_high: 0.28
+    padding_free: true
+    dynamic_batching: true
+    max_token_len_per_gpu: 24096
+    ulysses_size: 1
+    model:
+      model_path: ${oc.env:TIMELENS_MODEL_PATH,/path/to/Qwen3.5-VL-4B}
+      enable_gradient_checkpointing: true
+      trust_remote_code: false
+      freeze_vision_tower: true
+    optim:
+      lr: 1.0e-6
+      weight_decay: 0.01
+      strategy: adamw
+      lr_warmup_ratio: 0.05
+      lr_scheduler_type: constant
+    fsdp:
+      torch_dtype: bf16
+      enable_full_shard: true
+      enable_cpu_offload: false
+      enable_rank0_init: true
+    offload:
+      offload_params: false
+      offload_optimizer: false
+
+  rollout:
+    n: 8
+    temperature: 1.0
+    top_p: 0.85
+    limit_images: 5
+    gpu_memory_utilization: 0.5
+    enforce_eager: false
+    enable_chunked_prefill: true
+    tensor_parallel_size: 1
+    max_num_batched_tokens: 25000
+    disable_tqdm: true
+    calculate_log_probs: false
+
+    val_override_config:
+      temperature: 0.7
+      top_p: 0.95
+      n: 1
+
+  ref:
+    fsdp:
+      torch_dtype: bf16
+      enable_full_shard: true
+      enable_cpu_offload: false
+      enable_rank0_init: true
+    offload:
+      offload_params: false
+
+  reward:
+    reward_function: scripts/timelens/timelens_reward.py:compute_score
+    reward_function_kwargs: {}
+
+trainer:
+  total_epochs: 1
+  max_steps: null
+  project_name: TempSamp-R1
+  experiment_name: "timelens_grpo"
+  logger: ["console"]
+  nnodes: 1
+  n_gpus_per_node: 8
+  val_freq: -1
+  val_before_train: false
+  val_only: false
+  val_generations_to_log: 0
+  save_freq: 20
+  save_limit: 2
+  save_model_only: false
+  keep_optim_only_latest: true
+  save_checkpoint_path: null
+  load_checkpoint_path: null
+  find_last_checkpoint: false
