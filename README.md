@@ -30,7 +30,7 @@ GT injection lives in [`verl/trainer/ray_trainer.py`](verl/trainer/ray_trainer.p
 Performance on **TimeLens-Bench** (Charades / ActivityNet / QVHighlights-TimeLens). **TempSamp-R1-4B** = Qwen3.5-VL-4B + GT injection + reward shaping. For each column, the best score is shown in **bold amber** and the second-best is <u>underlined</u>.
 
 <p align="center">
-  <img src="docs/assets/timelens_bench_full.png" alt="TimeLens-Bench full results table" width="960"/>
+  <img src="docs/assets/timelens_bench_full.svg" alt="TimeLens-Bench full results table" width="960"/>
 </p>
 
 
