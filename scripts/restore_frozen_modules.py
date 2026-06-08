@@ -2,7 +2,7 @@
 
 Defensive guardrail for downstream eval/inference. With recent verl the
 ``scripts/model_merger.py`` already writes both the new (``model.
-language_model.visual.*``) AND the old (``model.visual.*``) HF Qwen3.5-VL
+language_model.visual.*``) AND the old (``model.visual.*``) HF Qwen3.5
 layouts for the visual tower, so frozen-module restoration is normally
 a no-op even when training set ``worker.actor.model.freeze_vision_tower
 =true``. This script remains useful for:
@@ -175,7 +175,7 @@ def restore(hf_dir: Path, base_model: Path, dry_run: bool = False) -> tuple[int,
         # use to decide whether the vLLM-compatible sibling dir needs a
         # rebuild. Also avoids the multi-second I/O of loading and rewriting
         # ~9 GiB of safetensors in the common case (current verl already
-        # writes both Qwen3.5-VL layouts, so this branch is the norm).
+        # writes both Qwen3.5 layouts, so this branch is the norm).
         print("[restore] no missing tensors; HF dir is already complete (no-op).")
         return kept, 0, len(base_keys)
 

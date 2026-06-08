@@ -7,7 +7,7 @@
 #   2. Verify all base parameters are present (scripts/restore_frozen_modules.py).
 #   3. Build a vLLM-compatible checkpoint dir (scripts/fix_vllm_ckpt.py)
 #      — renames `model.language_model.visual.*` to `model.visual.*` so vLLM's
-#      Qwen3.5-VL mapper finds the ViT.
+#      Qwen3.5 mapper finds the ViT.
 #   4. For each dataset in DATASETS, launch one shard per GPU and merge.
 #
 # Usage:
@@ -38,7 +38,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MODEL_PATH="${1:?Usage: $0 <CHECKPOINT_PATH> [ENABLE_THINKING] [OUTPUT_DIR]}"
 ENABLE_THINKING="${2:-false}"
 BENCH_DIR="${BENCH_DIR:-/path/to/TimeLens-Bench}"
-BASE_MODEL="${BASE_MODEL:-/path/to/Qwen3.5-VL-4B}"
+BASE_MODEL="${BASE_MODEL:-/path/to/Qwen3.5-4B}"
 
 # ---------- eval settings ----------
 DATASETS="${DATASETS:-charades-timelens,activitynet-timelens,qvhighlights-timelens}"
@@ -92,7 +92,7 @@ python "${PROJECT_DIR}/scripts/restore_frozen_modules.py" \
     --hf_dir "$HF_MODEL_PATH" --base_model "$BASE_MODEL"
 
 # ---------- build vLLM-compatible checkpoint ----------
-# Qwen3.5-VL's HF state dict uses `model.language_model.visual.*` but vLLM's
+# Qwen3.5's HF state dict uses `model.language_model.visual.*` but vLLM's
 # built-in hf_to_vllm_mapper expects `model.visual.*`. fix_vllm_ckpt.py writes
 # a sibling dir with the renamed keys so vLLM loads the ViT correctly.
 VLLM_MODEL_PATH="$MODEL_PATH/huggingface_vllm"

@@ -27,7 +27,7 @@ GT injection lives in [`verl/trainer/ray_trainer.py`](verl/trainer/ray_trainer.p
 
 ## Results
 
-Performance on **TimeLens-Bench** (Charades / ActivityNet / QVHighlights-TimeLens). **TempSamp-R1-4B** = Qwen3.5-VL-4B + GT injection + reward shaping. For each column, the best score is shown in **bold amber** and the second-best is <u>underlined</u>.
+Performance on **TimeLens-Bench** (Charades / ActivityNet / QVHighlights-TimeLens). **TempSamp-R1-4B** = Qwen3.5-4B + GT injection + reward shaping. For each column, the best score is shown in **bold amber** and the second-best is <u>underlined</u>.
 
 <p align="center">
   <img src="docs/assets/timelens_bench_full.svg" alt="TimeLens-Bench full results table" width="960"/>
@@ -37,7 +37,7 @@ Performance on **TimeLens-Bench** (Charades / ActivityNet / QVHighlights-TimeLen
 <details style="margin: 1.5em 0;">
 <summary><h2 style="display: inline-block; margin: 0 0 0.75em 0; padding: 0;">Installation</h2></summary>
 
-The combination below is the exact one we have verified end-to-end on **8 × NVIDIA H20 (sm_90, CUDA 12.6 runtime)** with Qwen3.5-VL-4B. Newer toolkits (CUDA 12.8 PyTorch wheels) are forward-compatible with the CUDA 12.6 driver.
+The combination below is the exact one we have verified end-to-end on **8 × NVIDIA H20 (sm_90, CUDA 12.6 runtime)** with Qwen3.5-4B. Newer toolkits (CUDA 12.8 PyTorch wheels) are forward-compatible with the CUDA 12.6 driver.
 
 | Package | Version |
 |---|---|
@@ -180,12 +180,12 @@ before launching training.)
 
 ```bash
 # Vanilla GRPO baseline
-TIMELENS_MODEL_PATH=/path/to/Qwen3.5-VL-4B \
+TIMELENS_MODEL_PATH=/path/to/Qwen3.5-4B \
 TIMELENS_TRAIN_FILES=data/timelens_grpo_train.jsonl \
   bash scripts/train/timelens_grpo.sh
 
 # TempSamp-R1 (GT injection + reward shaping)
-TIMELENS_MODEL_PATH=/path/to/Qwen3.5-VL-4B \
+TIMELENS_MODEL_PATH=/path/to/Qwen3.5-4B \
 TIMELENS_TRAIN_FILES=data/timelens_grpo_train.jsonl \
   bash scripts/train/timelens_tempsamp.sh
 ```
@@ -194,7 +194,7 @@ TIMELENS_TRAIN_FILES=data/timelens_grpo_train.jsonl \
 
 ```bash
 # Single-step eval on TimeLens-Bench (all 3 subtasks) using vLLM
-BASE_MODEL=/path/to/Qwen3.5-VL-4B \
+BASE_MODEL=/path/to/Qwen3.5-4B \
 BENCH_DIR=/path/to/datasets/TimeLens-Bench \
   bash scripts/eval/eval_timelens_bench.sh /path/to/checkpoint/global_step_NNN/actor
 ```

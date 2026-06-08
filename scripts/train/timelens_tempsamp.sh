@@ -23,7 +23,7 @@ PYTHON_BIN="${PYTHON_BIN:-$(command -v python)}"
 RAY_BIN="${RAY_BIN:-$(command -v ray)}"
 
 # ---------- model / data (override via env) ----------
-export TIMELENS_MODEL_PATH="${TIMELENS_MODEL_PATH:-/path/to/Qwen3.5-VL-4B}"
+export TIMELENS_MODEL_PATH="${TIMELENS_MODEL_PATH:-/path/to/Qwen3.5-4B}"
 export TIMELENS_TRAIN_FILES="${TIMELENS_TRAIN_FILES:-${PROJECT_DIR}/data/timelens_grpo_train.jsonl}"
 export TIMELENS_VAL_FILES="${TIMELENS_VAL_FILES:-${TIMELENS_TRAIN_FILES}}"
 

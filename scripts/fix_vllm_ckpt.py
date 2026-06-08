@@ -1,9 +1,9 @@
-"""Build a vLLM-compatible copy of a merged HF Qwen3.5-VL checkpoint.
+"""Build a vLLM-compatible copy of a merged HF Qwen3.5 checkpoint.
 
 Problem
 -------
 verl's model_merger produces an HF checkpoint whose state_dict keys follow the
-new HF Qwen3.5-VL convention:
+new HF Qwen3.5 convention:
 
     model.language_model.visual.blocks.*.attn.qkv.weight
     model.language_model.embed_tokens.weight

@@ -269,7 +269,7 @@ if __name__ == "__main__":
             state_dict.pop(k, None)
 
     # Write the safetensors file ourselves to avoid HF `save_pretrained`'s
-    # implicit key remapping. On nested VL architectures (Qwen3.5-VL etc.)
+    # implicit key remapping. On nested VL architectures (Qwen3.5 etc.)
     # save_pretrained(state_dict=…) silently renames `model.visual.*` to
     # `model.language_model.visual.*`, producing a file that vLLM refuses to
     # load. Writing the merged dict directly preserves the exact same key

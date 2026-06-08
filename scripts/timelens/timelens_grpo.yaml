@@ -1,4 +1,4 @@
-# TimeLens Temporal Grounding — vanilla GRPO baseline (Qwen3.5-VL-4B).
+# TimeLens Temporal Grounding — vanilla GRPO baseline (Qwen3.5-4B).
 # Reward: temporal IoU + format (scripts/timelens/timelens_reward.py).
 # For the TempSamp-R1 variant (GT injection + reward shaping) see
 # scripts/timelens/timelens_tempsamp.yaml.
@@ -65,7 +65,7 @@ worker:
     max_token_len_per_gpu: 24096
     ulysses_size: 1
     model:
-      model_path: ${oc.env:TIMELENS_MODEL_PATH,/path/to/Qwen3.5-VL-4B}
+      model_path: ${oc.env:TIMELENS_MODEL_PATH,/path/to/Qwen3.5-4B}
       enable_gradient_checkpointing: true
       trust_remote_code: false
       freeze_vision_tower: true
