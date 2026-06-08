@@ -508,7 +508,7 @@ class RayPPOTrainer:
             if not config.algorithm.gt_builder:
                 raise ValueError(
                     "algorithm.use_gt_injection=True requires algorithm.gt_builder to be set "
-                    "(e.g. 'examples.timelens.timelens_reward:build_gt_response')."
+                    "(e.g. 'scripts.timelens.timelens_reward:build_gt_response')."
                 )
             # GT injection rewrites one row in the group with GT-built tokens,
             # but the rollout_log_probs vLLM returned are for the original
