@@ -17,6 +17,9 @@
 > [!TIP]
 > If you find this project useful, please consider giving it a ⭐ and citing our paper — it really helps the project grow and lets more people discover it. See [Citation](#citation).
 
+> [!NOTE]
+> 🏆 **AIC 高光剪辑赛道 / Highlight Video Re-framing competition** — a runnable baseline kit (trivial center-crop + Qwen-VL two-stage) lives in [`baseline/`](baseline/). See [baseline/README.md](baseline/README.md) for task definition, submission format, and how to run.
+
 An open-source implementation of **TempSamp-R1** for **video temporal grounding**, built on top of the [EasyR1](https://github.com/hiyouga/EasyR1) / [verl](https://github.com/volcengine/verl) RL training stack. It contributes two pieces on top of vanilla GRPO:
 
 1. **GT injection** — replace one slot of each rollout group with the ground-truth answer (mix-policy GRPO).
