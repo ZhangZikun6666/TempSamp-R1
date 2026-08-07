@@ -298,9 +298,14 @@ class QwenVL:
             image_inputs, video_inputs = process_vision_info(messages)
         except Exception:
             image_inputs, video_inputs = None, None
-        inputs = self.processor(
-            text=[text], images=image_inputs, videos=video_inputs,
-            padding=True, return_tensors="pt")
+        try:
+            inputs = self.processor(
+                text=[text], images=image_inputs, videos=video_inputs,
+                processor_kwargs={"padding": True, "return_tensors": "pt"})
+        except TypeError:
+            inputs = self.processor(
+                text=[text], images=image_inputs, videos=video_inputs,
+                padding=True, return_tensors="pt")
         inputs = inputs.to(self.model.device)
         import torch
         with torch.no_grad():
