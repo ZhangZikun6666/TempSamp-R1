@@ -61,6 +61,25 @@ def load_index(index_path):
     return out
 
 
+def load_done_ids(output_path):
+    """Read an existing submission jsonl and return the video_ids already done."""
+    if not os.path.exists(output_path):
+        return set()
+    done = set()
+    with open(output_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except Exception:
+                continue
+            if isinstance(rec, dict) and "video_id" in rec:
+                done.add(str(rec["video_id"]))
+    return done
+
+
 def video_meta(video_path):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
