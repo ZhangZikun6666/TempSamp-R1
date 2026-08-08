@@ -188,6 +188,24 @@ def parse_focus_norm(text, W=None, H=None):
 
 def parse_segments_sec(text):
     """Parse highlight intervals [[start_sec, end_sec], ...]. [] on failure."""
+
+    def _pair(s):
+        if isinstance(s, (list, tuple)) and len(s) >= 2:
+            try:
+                return (float(s[0]), float(s[1]))
+            except (TypeError, ValueError):
+                return None
+        if isinstance(s, dict):
+            st = s.get("start_sec", s.get("start"))
+            en = s.get("end_sec", s.get("end"))
+            if st is None or en is None:
+                return None
+            try:
+                return (float(st), float(en))
+            except (TypeError, ValueError):
+                return None
+        return None
+
     for m in re.finditer(r"\{(?:[^{}]|\{[^{}]*\})*\}", text, re.S):
         try:
             obj = json.loads(m.group(0))
