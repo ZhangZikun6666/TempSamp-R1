@@ -39,6 +39,7 @@ import os
 import re
 import json
 import argparse
+import math
 
 import cv2
 from PIL import Image
@@ -51,11 +52,15 @@ def load_index(index_path):
     Each item: {"video_id": "0", "targetRatioWH": [16, 9]}.
     """
     with open(index_path, "r", encoding="utf-8") as f:
-        items = json.load(f)
+        content = f.read()
+    try:
+        items = json.loads(content)
+    except json.JSONDecodeError:
+        items = [json.loads(line) for line in content.splitlines() if line.strip()]
     out = []
     for it in items:
         vid = str(it["video_id"])
-        tr = it.get("targetRatioWH", [16, 9])
+        tr = it["targetRatioWH"]
         tw, th = float(tr[0]), float(tr[1])
         out.append((vid, (tw, th)))
     return out
@@ -122,12 +127,13 @@ def compute_crop_size(W, H, tw, th):
         return W, H
     target = float(tw) / float(th)
     if W / float(H) >= target:        # source wider than target -> full height
-        ch = H
-        cw = min(int(round(H * target)), W)
+        cw = min(int(math.floor(H * target)), W)
     else:                              # source taller than target -> full width
         cw = W
-        ch = min(int(round(W / target)), H)
-    return max(1, cw), max(1, ch)
+    cw = max(1, cw)
+    # The evaluator derives height from the submitted integer width, so use
+    # that exact height for placement and bounds checks.
+    return cw, cw * float(th) / float(tw)
 
 
 def center_to_box(cx, cy, W, H, cw, ch):
@@ -135,7 +141,7 @@ def center_to_box(cx, cy, W, H, cw, ch):
     px = cx * W - cw / 2.0
     py = cy * H - ch / 2.0
     px = int(round(max(0, min(px, W - cw))))
-    py = int(round(max(0, min(py, H - ch))))
+    py = int(math.floor(max(0, min(py, H - ch))))
     return [px, py, cw, ch]
 
 
@@ -298,24 +304,26 @@ class QwenVL:
     def __init__(self, model_path, device_map="auto", dtype="auto",
                  min_pixels=None, max_pixels=None, enable_thinking=False):
         self.enable_thinking = enable_thinking
+        self.max_pixels = max_pixels
         import torch  # noqa
-        from transformers import AutoProcessor
-        model = None
-        try:
+        from transformers import AutoConfig, AutoProcessor
+        model_type = AutoConfig.from_pretrained(model_path).model_type
+        self.is_qwen3_vl = model_type == "qwen3_vl"
+        if self.is_qwen3_vl:
+            from transformers import Qwen3VLForConditionalGeneration
+            model = Qwen3VLForConditionalGeneration.from_pretrained(
+                model_path, dtype=dtype, device_map=device_map)
+        elif model_type == "qwen2_5_vl":
+            from transformers import Qwen2_5_VLForConditionalGeneration
+            model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                model_path, torch_dtype=dtype, device_map=device_map)
+        else:
             from transformers import AutoModelForImageTextToText
             model = AutoModelForImageTextToText.from_pretrained(
                 model_path, torch_dtype=dtype, device_map=device_map)
-        except Exception:
-            try:
-                from transformers import Qwen2_5_VLForConditionalGeneration as M
-                model = M.from_pretrained(model_path, torch_dtype=dtype,
-                                          device_map=device_map)
-            except Exception:
-                from transformers import AutoModelForVision2Seq as M
-                model = M.from_pretrained(model_path, torch_dtype=dtype,
-                                          device_map=device_map)
         model.eval()
         self.model = model
+        self.model_params_b = sum(p.numel() for p in model.parameters()) / 1e9
         proc_kwargs = {}
         if min_pixels:
             proc_kwargs["min_pixels"] = min_pixels
@@ -330,19 +338,25 @@ class QwenVL:
                 messages, enable_thinking=self.enable_thinking, **tmpl_kwargs)
         except (TypeError, ValueError):
             text = self.processor.apply_chat_template(messages, **tmpl_kwargs)
-        try:
-            from qwen_vl_utils import process_vision_info
-            image_inputs, video_inputs = process_vision_info(messages)
-        except Exception:
-            image_inputs, video_inputs = None, None
-        try:
+        from qwen_vl_utils import process_vision_info
+        if self.is_qwen3_vl:
+            image_inputs, video_inputs, video_kwargs = process_vision_info(
+                messages, image_patch_size=16, return_video_kwargs=True,
+                return_video_metadata=True)
+            if video_inputs is not None:
+                video_inputs, video_metadatas = map(list, zip(*video_inputs))
+            else:
+                video_metadatas = None
             inputs = self.processor(
                 text=[text], images=image_inputs, videos=video_inputs,
-                processor_kwargs={"padding": True, "return_tensors": "pt"})
-        except TypeError:
+                video_metadata=video_metadatas, do_resize=False,
+                padding=True, return_tensors="pt", **video_kwargs)
+        else:
+            image_inputs, video_inputs, video_kwargs = process_vision_info(
+                messages, return_video_kwargs=True)
             inputs = self.processor(
                 text=[text], images=image_inputs, videos=video_inputs,
-                padding=True, return_tensors="pt")
+                padding=True, return_tensors="pt", **video_kwargs)
         inputs = inputs.to(self.model.device)
         import torch
         with torch.no_grad():
@@ -361,10 +375,13 @@ class QwenVL:
             "Output ONLY JSON, no extra text, strictly: "
             "{\"segments\": [[start_sec, end_sec]]}"
         )
+        video_item = {"type": "video", "video": video_path, "fps": fps_sample}
+        if self.max_pixels is not None:
+            video_item["max_pixels"] = self.max_pixels
         messages = [{
             "role": "user",
             "content": [
-                {"type": "video", "video": video_path, "fps": fps_sample},
+                video_item,
                 {"type": "text", "text": prompt},
             ],
         }]
@@ -382,10 +399,13 @@ class QwenVL:
             "Output ONLY JSON (no other text): {\"center\": [x, y]}"
             % (int(tw), int(th))
         )
+        image_item = {"type": "image", "image": pil_img}
+        if self.max_pixels is not None:
+            image_item["max_pixels"] = self.max_pixels
         messages = [{
             "role": "user",
             "content": [
-                {"type": "image", "image": pil_img},
+                image_item,
                 {"type": "text", "text": prompt},
             ],
         }]
@@ -458,6 +478,10 @@ def main():
     model = QwenVL(args.model, device_map=args.device_map, dtype=args.dtype,
                    min_pixels=args.min_pixels, max_pixels=args.max_pixels,
                    enable_thinking=args.enable_thinking)
+    if not (0 < model.model_params_b <= 9):
+        raise ValueError("Loaded model has %.6f B parameters; competition limit is 9 B"
+                         % model.model_params_b)
+    print("Loaded model parameters: %.6f B" % model.model_params_b)
 
     raw_path = args.out + ".raw.jsonl"
     n_lines = 0
@@ -466,13 +490,10 @@ def main():
         for vi, (vid, target) in enumerate(index, 1):
             video_path = os.path.join(args.video_dir, vid + ".mp4")
             if not os.path.exists(video_path):
-                print("  [skip] no video: %s" % video_path)
-                fout.write(json.dumps(
-                    {"video_id": vid, "targetRatioWH": [int(target[0]),
-                     int(target[1])], "predictions": []},
-                    ensure_ascii=False) + "\n")
-                continue
+                raise FileNotFoundError("Video missing: %s" % video_path)
             n_frames, fps, W, H = video_meta(video_path)
+            if n_frames <= 0 or fps <= 0 or W <= 0 or H <= 0:
+                raise ValueError("Cannot read video metadata: %s" % video_path)
             cw, ch = compute_crop_size(W, H, target[0], target[1])
 
             # Stage 1: highlight localization (model only).
@@ -508,6 +529,7 @@ def main():
             predictions.sort(key=lambda r: r["frame"])
             rec = {"video_id": vid,
                    "targetRatioWH": [int(target[0]), int(target[1])],
+                   "model_params_b": model.model_params_b,
                    "predictions": predictions}
             fout.write(json.dumps(rec, ensure_ascii=False) + "\n")
             n_lines += len(predictions)
